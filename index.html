@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>컨테이너 적재 3D 시뮬레이터 - 화물 수정 및 순서 개선</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+        h1 { text-align: center; color: #333; }
+        .section { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); }
+        label { display: block; margin: 12px 0 6px; font-weight: bold; }
+        input, select, button { padding: 10px; font-size: 16px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #f0f0f0; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button.edit { background: #28a745; }
+        button.edit:hover { background: #218838; }
+        button.del { background: #dc3545; }
+        button.del:hover { background: #c82333; }
+        button.apply { background: #ffc107; color: black; }
+        button.apply:hover { background: #e0a800; }
+        .orientation { display: flex; align-items: center; gap: 30px; margin: 15px 0; flex-wrap: wrap; }
+        .orient-item { text-align: center; }
+        .orient-item label { font-weight: normal; margin-top: 8px; display: block; }
+        #result { display: none; }
+        #plot { width: 100%; height: 750px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>컨테이너 적재 시뮬레이터 by K-Dragon<br><small>바닥 방향 설정 + Y축 우선 적재 + 분할 정보 표시</small></h1>
+
+    <div class="section">
+        <h2>1. 사용할 컨테이너 추가</h2>
+        <select id="containerSelect">
+            <option value="20DC">20DC - 20ft Dry</option>
+            <option value="40DC">40DC - 40ft Dry</option>
+            <option value="40HC">40HC - 40ft High Cube (추천)</option>
+            <option value="45HC">45HC - 45ft High Cube</option>
+            <option value="20RF">20RF - 20ft Reefer</option>
+            <option value="40RF">40RF - 40ft Reefer HC</option>
+        </select>
+        <input type="number" id="containerQty" value="1" min="1" style="width:80px;">
+        <input type="number" id="containerMaxKg" placeholder="최대 적재 중량(kg)" style="width:200px;">
+        <button onclick="addContainers()">컨테이너 추가</button>
+
+        <table id="containerTable">
+            <thead><tr><th>컨테이너</th><th>수량</th><th>최대 중량(kg)</th><th>작업</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>2. 화물 박스 입력 및 수정</h2>
+        <label>박스 이름</label>
+        <input type="text" id="boxName" placeholder="예: Cargo1">
+
+        <label>치수 (mm)</label>
+        <input type="number" id="boxL" placeholder="Length" style="width:130px;">
+        <input type="number" id="boxW" placeholder="Width" style="width:130px;">
+        <input type="number" id="boxH" placeholder="Height" style="width:130px;">
+
+        <label>수량</label>
+        <input type="number" id="boxQty" value="10" min="1">
+
+        <label>박스당 무게 (kg)</label>
+        <input type="number" id="boxWeight" value="0" step="0.1">
+
+        <label><strong>화물 바닥 설정 (필요한 옵션만 체크)</strong></label>
+        <div class="orientation">
+            <div class="orient-item">
+                <label><input type="checkbox" id="baseLW" checked> Length × Width 바닥</label>
+            </div>
+            <div class="orient-item">
+                <label><input type="checkbox" id="baseWH"> Width × Height 바닥</label>
+            </div>
+            <div class="orient-item">
+                <label><input type="checkbox" id="baseHL"> Height × Length 바닥</label>
+            </div>
+        </div>
+
+        <button id="addBtn" onclick="addBox()">화물 추가</button>
+        <button id="applyBtn" class="apply" onclick="applyEdit()" style="display:none;">화물 수정 적용</button>
+        <button onclick="cancelEdit()" id="cancelBtn" style="display:none;">취소</button>
+
+        <table id="boxTable">
+            <thead><tr><th>이름</th><th>치수(mm)</th><th>수량</th><th>무게(kg)</th><th>허용 바닥 면</th><th>작업</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <button onclick="runSimulation()" style="font-size:20px; padding:15px 40px;">▶ 3D 시뮬레이션 실행</button>
+    </div>
+
+    <div class="section" id="result">
+        <h2>시뮬레이션 결과</h2>
+        <div id="summary"></div>
+        <div id="plot"></div>
+    </div>
+
+<script>
+const CONTAINERS = {
+    "20DC": {name: "20ft Dry", L: 5890, W: 2350, H: 2390, defaultMaxKg: 28200},
+    "40DC": {name: "40ft Dry", L: 12030, W: 2350, H: 2390, defaultMaxKg: 28750},
+    "40HC": {name: "40ft High Cube", L: 12030, W: 2350, H: 2698, defaultMaxKg: 28700},
+    "45HC": {name: "45ft High Cube", L: 13556, W: 2350, H: 2698, defaultMaxKg: 28500},
+    "20RF": {name: "20ft Reefer", L: 5450, W: 2260, H: 2270, defaultMaxKg: 27000},
+    "40RF": {name: "40ft Reefer HC", L: 11580, W: 2286, H: 2500, defaultMaxKg: 29400},
+};
+
+let containerList = [];
+let boxes = [];
+let editingIndex = -1;
+
+function addContainers() {
+    const key = document.getElementById("containerSelect").value;
+    const qty = parseInt(document.getElementById("containerQty").value) || 1;
+    let maxKg = parseFloat(document.getElementById("containerMaxKg").value);
+    if (isNaN(maxKg) || maxKg <= 0) maxKg = CONTAINERS[key].defaultMaxKg;
+
+    const existing = containerList.find(c => c.key === key);
+    if (existing) existing.qty += qty;
+    else containerList.push({key, qty, maxKg});
+    updateContainerTable();
+}
+
+function updateContainerTable() {
+    const tbody = document.querySelector("#containerTable tbody");
+    tbody.innerHTML = "";
+    containerList.forEach((c, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${CONTAINERS[c.key].name} (${c.key})</td><td>${c.qty}</td><td>${c.maxKg.toLocaleString()}</td><td><button class="del" onclick="removeContainer(${i})">삭제</button></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function removeContainer(i) {
+    containerList.splice(i, 1);
+    updateContainerTable();
+}
+
+function addBox() {
+    const name = document.getElementById("boxName").value.trim() || "Cargo" + (boxes.length + 1);
+    const l = parseInt(document.getElementById("boxL").value);
+    const w = parseInt(document.getElementById("boxW").value);
+    const h = parseInt(document.getElementById("boxH").value);
+    const qty = parseInt(document.getElementById("boxQty").value);
+    const weight = parseFloat(document.getElementById("boxWeight").value) || 0;
+
+    const allowedBases = [];
+    if (document.getElementById("baseLW").checked) allowedBases.push("LW");
+    if (document.getElementById("baseWH").checked) allowedBases.push("WH");
+    if (document.getElementById("baseHL").checked) allowedBases.push("HL");
+
+    if (!l || !w || !h || !qty) return alert("치수와 수량을 입력하세요.");
+    if (allowedBases.length === 0) return alert("최소 하나의 바닥 면을 허용해주세요.");
+
+    boxes.push({name, l, w, h, qty, weight, allowedBases});
+    updateBoxTable();
+    clearForm();
+}
+
+function editBox(index) {
+    const box = boxes[index];
+    editingIndex = index;
+
+    document.getElementById("boxName").value = box.name;
+    document.getElementById("boxL").value = box.l;
+    document.getElementById("boxW").value = box.w;
+    document.getElementById("boxH").value = box.h;
+    document.getElementById("boxQty").value = box.qty;
+    document.getElementById("boxWeight").value = box.weight;
+
+    document.getElementById("baseLW").checked = box.allowedBases.includes("LW");
+    document.getElementById("baseWH").checked = box.allowedBases.includes("WH");
+    document.getElementById("baseHL").checked = box.allowedBases.includes("HL");
+
+    document.getElementById("addBtn").style.display = "none";
+    document.getElementById("applyBtn").style.display = "inline-block";
+    document.getElementById("cancelBtn").style.display = "inline-block";
+}
+
+function applyEdit() {
+    if (editingIndex === -1) return;
+
+    const name = document.getElementById("boxName").value.trim() || "Cargo" + editingIndex;
+    const l = parseInt(document.getElementById("boxL").value);
+    const w = parseInt(document.getElementById("boxW").value);
+    const h = parseInt(document.getElementById("boxH").value);
+    const qty = parseInt(document.getElementById("boxQty").value);
+    const weight = parseFloat(document.getElementById("boxWeight").value) || 0;
+
+    const allowedBases = [];
+    if (document.getElementById("baseLW").checked) allowedBases.push("LW");
+    if (document.getElementById("baseWH").checked) allowedBases.push("WH");
+    if (document.getElementById("baseHL").checked) allowedBases.push("HL");
+
+    if (!l || !w || !h || !qty) return alert("치수와 수량을 입력하세요.");
+    if (allowedBases.length === 0) return alert("최소 하나의 바닥 면을 허용해주세요.");
+
+    boxes[editingIndex] = {name, l, w, h, qty, weight, allowedBases};
+    updateBoxTable();
+    cancelEdit();
+}
+
+function cancelEdit() {
+    editingIndex = -1;
+    clearForm();
+    document.getElementById("addBtn").style.display = "inline-block";
+    document.getElementById("applyBtn").style.display = "none";
+    document.getElementById("cancelBtn").style.display = "none";
+}
+
+function clearForm() {
+    document.getElementById("boxName").value = "";
+    document.getElementById("boxL").value = document.getElementById("boxW").value = document.getElementById("boxH").value = "";
+    document.getElementById("boxQty").value = 10;
+    document.getElementById("boxWeight").value = 0;
+    document.getElementById("baseLW").checked = true;
+    document.getElementById("baseWH").checked = document.getElementById("baseHL").checked = false;
+}
+
+function updateBoxTable() {
+    const tbody = document.querySelector("#boxTable tbody");
+    tbody.innerHTML = "";
+    boxes.forEach((b, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${b.name}</td>
+            <td>${b.l}×${b.w}×${b.h}</td>
+            <td>${b.qty}</td>
+            <td>${b.weight}</td>
+            <td>${b.allowedBases.join(', ')}</td>
+            <td>
+                <button class="edit" onclick="editBox(${i})">수정</button>
+                <button class="del" onclick="removeBox(${i})">삭제</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function removeBox(i) {
+    if (confirm("이 화물을 삭제하시겠습니까?")) {
+        boxes.splice(i, 1);
+        updateBoxTable();
+    }
+}
+
+function getAllowedOrientations(box) {
+    const {l, w, h, allowedBases} = box;
+    const orientations = [];
+    if (allowedBases.includes("LW")) orientations.push({baseX: l, baseY: w, height: h});
+    if (allowedBases.includes("WH")) orientations.push({baseX: w, baseY: h, height: l});
+    if (allowedBases.includes("HL")) orientations.push({baseX: h, baseY: l, height: w});
+    return orientations;
+}
+
+// 핵심 수정: Y 방향 우선 적재 (y부터 채우고 x로 이동)
+function packContainer(container, remainingBoxes) {
+    const {L: contL, W: contW, H: contH, maxKg: maxWeight} = container;
+    let currentWeight = 0;
+    const packed = [];
+    let z = 0;
+    let layerInfo = []; // 각 층의 분할 정보 저장
+
+    while (z < contH && remainingBoxes.some(b => b.qty > 0)) {
+        let layerPacked = false;
+        let layerDivision = null; // 현재 층의 nx, ny
+
+        for (let box of remainingBoxes) {
+            if (box.qty <= 0) continue;
+
+            const orients = getAllowedOrientations(box);
+            let bestOrient = null;
+            let bestCount = 0;
+
+            for (let orient of orients) {
+                if (orient.height + z > contH) continue;
+                const nx = Math.floor(contL / orient.baseX);
+                const ny = Math.floor(contW / orient.baseY);
+                const count = nx * ny;
+                if (count > bestCount) {
+                    bestCount = count;
+                    bestOrient = orient;
+                }
+            }
+
+            if (!bestOrient || bestCount === 0) continue;
+
+            const {baseX, baseY, height} = bestOrient;
+            const nx = Math.floor(contL / baseX);
+            const ny = Math.floor(contW / baseY);
+            layerDivision = {nx, ny, boxName: box.name}; // 분할 정보 저장
+
+            let canPlace = nx * ny;
+
+            if (currentWeight + canPlace * box.weight > maxWeight) {
+                canPlace = Math.floor((maxWeight - currentWeight) / box.weight);
+                if (canPlace <= 0) continue;
+            }
+
+            const toPlace = Math.min(canPlace, box.qty);
+
+            // Y 방향 우선 채우기: iy 먼저 증가, ix 나중에
+            for (let i = 0; i < toPlace; i++) {
+                const iy = i % ny;           // y 방향 먼저
+                const ix = Math.floor(i / ny); // x 방향 나중
+                packed.push({
+                    x: ix * baseX,
+                    y: iy * baseY,
+                    z: z,
+                    dx: baseX,
+                    dy: baseY,
+                    dz: height,
+                    name: box.name,
+                    color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')
+                });
+            }
+
+            box.qty -= toPlace;
+            currentWeight += toPlace * box.weight;
+            layerPacked = true;
+        }
+
+        if (layerPacked && layerDivision) {
+            layerInfo.push(layerDivision);
+        }
+
+        if (!layerPacked) break;
+
+        const layerBoxes = packed.filter(p => p.z === z);
+        if (layerBoxes.length === 0) break;
+        const minHeight = Math.min(...layerBoxes.map(p => p.dz));
+        z += minHeight;
+    }
+
+    const usedVolume = packed.reduce((s, p) => s + p.dx * p.dy * p.dz, 0);
+    const totalVolume = contL * contW * contH;
+
+    // 층별 분할 문자열 생성
+    let divisionStr = "없음";
+    if (layerInfo.length > 0) {
+        // 같은 박스면 하나로 합침, 다른 박스면 층별 표시
+        const uniqueLayers = [];
+        layerInfo.forEach(info => {
+            uniqueLayers.push(`L(${info.nx})×W(${info.ny})`);
+        });
+        divisionStr = uniqueLayers.join(" + ");
+    }
+
+    return {
+        packed,
+        volPct: Math.round(100 * usedVolume / totalVolume),
+        weightUsed: currentWeight,
+        weightPct: Math.round(100 * currentWeight / maxWeight),
+        division: divisionStr,
+        layers: layerInfo.length
+    };
+}
+
+function runSimulation() {
+    if (containerList.length === 0 || boxes.length === 0) {
+        alert("컨테이너와 화물을 모두 추가해주세요.");
+        return;
+    }
+
+    let remainingBoxes = boxes.map(b => ({
+        ...b,
+        allowedBases: [...b.allowedBases]
+    }));
+
+    let allResults = [];
+    let totalPacked = 0;
+    let offsetX = 0;
+    const traces = [];
+
+    containerList.forEach(cont => {
+        const cInfo = CONTAINERS[cont.key];
+        for (let i = 0; i < cont.qty; i++) {
+            const container = {L: cInfo.L, W: cInfo.W, H: cInfo.H, maxKg: cont.maxKg};
+            const result = packContainer(container, remainingBoxes);
+
+            allResults.push({name: `${cInfo.name} #${i+1}`, ...result});
+            totalPacked += result.packed.length;
+
+            // 컨테이너 외곽
+            traces.push({
+                type: 'mesh3d',
+                name: 'Container',
+                x: [offsetX, offsetX+cInfo.L, offsetX+cInfo.L, offsetX, offsetX, offsetX+cInfo.L, offsetX+cInfo.L, offsetX],
+                y: [0, 0, cInfo.W, cInfo.W, 0, 0, cInfo.W, cInfo.W],
+                z: [0, 0, 0, 0, cInfo.H, cInfo.H, cInfo.H, cInfo.H],
+                i: [7,0,0,0,4,4,6,6,4,0,3,3],
+                j: [3,4,1,2,5,6,5,2,0,1,6,7],
+                k: [0,7,2,3,6,7,1,1,5,5,2,6],
+                color: 'lightgray',
+                opacity: 0.15
+            });
+
+            // 박스들
+            result.packed.forEach(p => {
+                const x = [p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX, p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX];
+                const y = [p.y, p.y, p.y+p.dy, p.y+p.dy, p.y, p.y, p.y+p.dy, p.y+p.dy];
+                const z = [p.z, p.z, p.z, p.z, p.z+p.dz, p.z+p.dz, p.z+p.dz, p.z+p.dz];
+                traces.push({
+                    type: 'mesh3d',
+                    x, y, z,
+                    i: [7,0,0,0,4,4,6,1,4,0,3,3],
+                    j: [3,4,1,2,5,6,5,2,0,1,6,7],
+                    k: [0,7,2,3,6,7,1,1,5,5,2,6],
+                    color: p.color,
+                    opacity: 0.85,
+                    name: p.name
+                });
+            });
+
+            offsetX += cInfo.L + 3000;
+        }
+    });
+
+    let summaryHTML = `<h3>전체 적재 결과 - 총 ${totalPacked}개 적재</h3><hr>`;
+    allResults.forEach((r, idx) => {
+        summaryHTML += `
+            <h3>Container N${idx+1} - ${r.name}</h3>
+            <p><strong>Packed:</strong> ${r.packed.length} packages</p>
+            <p><strong>Arrangement:</strong> ${r.division} (총 ${r.layers}층)</p>
+            <p><strong>Volume utilization:</strong> ${r.volPct}%</p>
+            <p><strong>Cargo weight:</strong> ${r.weightUsed.toFixed(0)} kg (${r.weightPct}% of max)</p>
+            <hr>`;
+    });
+
+    document.getElementById("summary").innerHTML = summaryHTML;
+    document.getElementById("result").style.display = "block";
+
+    Plotly.newPlot('plot', traces, {
+        title: '컨테이너 적재 3D 시뮬레이션 (Y축 우선 적재)',
+        scene: {
+            xaxis: {title: 'Length (mm)'},
+            yaxis: {title: 'Width (mm)'},
+            zaxis: {title: 'Height (mm)'},
+            aspectmode: 'manual',
+            aspectratio: {x: 3, y: 1, z: 1},
+            camera: {eye: {x: 1.8, y: 1.8, z: 1.2}}
+        },
+        margin: {t: 60}
+    });
+}
+</script>
+</body>
+</html>
