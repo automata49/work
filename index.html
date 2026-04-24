@@ -2,18 +2,56 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>컨테이너 적재 시뮬레이터</title>
+    <title>컨테이너 적재 3D 시뮬레이터_v1.0</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-        h1 { text-align: center; color: #333; }
-        .section { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); }
-        label { display: block; margin: 12px 0 6px; font-weight: bold; }
-        input, select, button { padding: 10px; font-size: 16px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        th { background: #f0f0f0; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f9f9f9; 
+        }
+        h1 { 
+            text-align: center; 
+            color: #333; 
+        }
+        .section { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1); 
+        }
+        label { 
+            display: block; 
+            margin: 12px 0 6px; 
+            font-weight: bold; 
+        }
+        input, select, button { 
+            padding: 10px; 
+            font-size: 16px; 
+            margin-right: 10px; 
+            border-radius: 5px; 
+            border: 1px solid #ccc; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 15px 0; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            text-align: center; 
+        }
+        th { 
+            background: #f0f0f0; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+        }
         button:hover { background: #0056b3; }
         button.edit { background: #28a745; }
         button.edit:hover { background: #218838; }
@@ -21,34 +59,46 @@
         button.del:hover { background: #c82333; }
         button.apply { background: #ffc107; color: black; }
         button.apply:hover { background: #e0a800; }
-        .orientation { display: flex; align-items: center; gap: 30px; margin: 15px 0; flex-wrap: wrap; }
+        .orientation { 
+            display: flex; 
+            align-items: center; 
+            gap: 30px; 
+            margin: 15px 0; 
+            flex-wrap: wrap; 
+        }
         .orient-item { text-align: center; }
         .orient-item label { font-weight: normal; margin-top: 8px; display: block; }
         #result { display: none; }
-        #plot { width: 100%; height: 750px; margin-top: 20px; }
+        #plot { width: 100%; height: 780px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>컨테이너 적재 시뮬레이터<br><small></h1>
+    <h1>컨테이너 적재 3D 시뮬레이터</h1>
 
     <div class="section">
-        <h2>1. 사용할 컨테이너 추가</h2>
-        <select id="containerSelect">
-            <option value="20DC">20DC - 20ft Dry</option>
-            <option value="40DC">40DC - 40ft Dry</option>
-            <option value="40HC">40HC - 40ft High Cube (추천)</option>
-            <option value="45HC">45HC - 45ft High Cube</option>
-            <option value="20RF">20RF - 20ft Reefer</option>
-            <option value="40RF">40RF - 40ft Reefer HC</option>
-        </select>
-        <input type="number" id="containerQty" value="1" min="1" style="width:80px;">
-        <input type="number" id="containerMaxKg" placeholder="최대 적재 중량(kg)" style="width:200px;">
-        <button onclick="addContainers()">컨테이너 추가</button>
+    <h2>1. 사용할 컨테이너 추가</h2>
+    <select id="containerSelect">
+        <option value="20DC">20DC - 20ft Dry</option>
+        <option value="40DC">40DC - 40ft Dry</option>
+        <option value="40HC" selected>40HC - 40ft High Cube (추천)</option>   <!-- 기본값으로 변경 -->
+        <option value="45HC">45HC - 45ft High Cube</option>
+        <option value="20RF">20RF - 20ft Reefer</option>
+        <option value="40RF">40RF - 40ft Reefer HC</option>
+        <option value="24DR">24DR - 24ton Truck (EU)</option>
+        <option value="53DR">53DR - 53ft Truck (US)</option>
+        <option value="53RF">53RF - 53ft Reefer (US)</option>
+    </select>
+    <input type="number" id="containerQty" value="1" min="1" style="width:80px;">
+    
+    <!-- 40HC의 기본 최대 적재 중량을 미리 넣어줌 (필요시 수정 가능) -->
+    <input type="number" id="containerMaxKg" value="" placeholder="최대 적재 중량(kg)" style="width:200px;">
+    
+    <button onclick="addContainers()">컨테이너 추가</button>
 
-        <table id="containerTable">
-            <thead><tr><th>컨테이너</th><th>수량</th><th>최대 중량(kg)</th><th>작업</th></tr></thead>
-            <tbody></tbody>
-        </table>
+    <table id="containerTable">
+        <thead><tr><th>컨테이너</th><th>수량</th><th>최대 중량(kg)</th><th>작업</th></tr></thead>
+        <tbody></tbody>
+    </table>
     </div>
 
     <div class="section">
@@ -91,7 +141,7 @@
     </div>
 
     <div class="section">
-        <button onclick="runSimulation()" style="font-size:20px; padding:15px 40px;">▶ 3D 시뮬레이션 실행</button>
+        <button onclick="runSimulation()" style="font-size:20px; padding:15px 50px;">▶ 3D 시뮬레이션 실행</button>
     </div>
 
     <div class="section" id="result">
@@ -101,19 +151,24 @@
     </div>
 
 <script>
+// ==================== 컨테이너 스펙 ====================
 const CONTAINERS = {
-    "20DC": {name: "20ft Dry", L: 5890, W: 2350, H: 2390, defaultMaxKg: 28200},
-    "40DC": {name: "40ft Dry", L: 12030, W: 2350, H: 2390, defaultMaxKg: 28750},
-    "40HC": {name: "40ft High Cube", L: 12030, W: 2350, H: 2698, defaultMaxKg: 28700},
-    "45HC": {name: "45ft High Cube", L: 13556, W: 2350, H: 2698, defaultMaxKg: 28500},
-    "20RF": {name: "20ft Reefer", L: 5450, W: 2260, H: 2270, defaultMaxKg: 27000},
-    "40RF": {name: "40ft Reefer HC", L: 11580, W: 2286, H: 2500, defaultMaxKg: 29400},
+    "20DC": {name: "20ft Dry",          L: 5890, W: 2350, H: 2390, defaultMaxKg: 15000},
+    "40DC": {name: "40ft Dry",          L: 12030, W: 2350, H: 2390, defaultMaxKg: 18000},
+    "40HC": {name: "40ft High Cube",    L: 12030, W: 2350, H: 2698, defaultMaxKg: 18000},
+    "45HC": {name: "45ft High Cube",    L: 13556, W: 2350, H: 2698, defaultMaxKg: 18000},
+    "20RF": {name: "20ft Reefer",       L: 5450, W: 2260, H: 2270, defaultMaxKg: 15000},
+    "40RF": {name: "40ft Reefer HC",    L: 11580, W: 2286, H: 2500, defaultMaxKg: 18000},
+    "24DR": {name: "24ton Truck",       L: 13400, W: 2400, H: 2600, defaultMaxKg: 23000},
+    "53DR": {name: "53ft Truck",        L: 16053, W: 2553, H: 2794, defaultMaxKg: 20000},
+    "53RF": {name: "53ft Reefer",       L: 15697, W: 2477, H: 2616, defaultMaxKg: 19500},
 };
 
 let containerList = [];
 let boxes = [];
 let editingIndex = -1;
 
+// ==================== 컨테이너 관리 ====================
 function addContainers() {
     const key = document.getElementById("containerSelect").value;
     const qty = parseInt(document.getElementById("containerQty").value) || 1;
@@ -121,8 +176,12 @@ function addContainers() {
     if (isNaN(maxKg) || maxKg <= 0) maxKg = CONTAINERS[key].defaultMaxKg;
 
     const existing = containerList.find(c => c.key === key);
-    if (existing) existing.qty += qty;
-    else containerList.push({key, qty, maxKg});
+    if (existing) {
+        existing.qty += qty;
+        existing.maxKg = maxKg;
+    } else {
+        containerList.push({key, qty, maxKg});
+    }
     updateContainerTable();
 }
 
@@ -131,7 +190,11 @@ function updateContainerTable() {
     tbody.innerHTML = "";
     containerList.forEach((c, i) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${CONTAINERS[c.key].name} (${c.key})</td><td>${c.qty}</td><td>${c.maxKg.toLocaleString()}</td><td><button class="del" onclick="removeContainer(${i})">삭제</button></td>`;
+        tr.innerHTML = `
+            <td>${CONTAINERS[c.key].name} (${c.key})</td>
+            <td>${c.qty}</td>
+            <td>${c.maxKg.toLocaleString()}</td>
+            <td><button class="del" onclick="removeContainer(${i})">삭제</button></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -141,6 +204,7 @@ function removeContainer(i) {
     updateContainerTable();
 }
 
+// ==================== 화물 박스 관리 ====================
 function addBox() {
     const name = document.getElementById("boxName").value.trim() || "Cargo" + (boxes.length + 1);
     const l = parseInt(document.getElementById("boxL").value);
@@ -184,7 +248,7 @@ function editBox(index) {
 
 function applyEdit() {
     if (editingIndex === -1) return;
-
+    // addBox()와 동일한 로직
     const name = document.getElementById("boxName").value.trim() || "Cargo" + editingIndex;
     const l = parseInt(document.getElementById("boxL").value);
     const w = parseInt(document.getElementById("boxW").value);
@@ -215,11 +279,14 @@ function cancelEdit() {
 
 function clearForm() {
     document.getElementById("boxName").value = "";
-    document.getElementById("boxL").value = document.getElementById("boxW").value = document.getElementById("boxH").value = "";
+    document.getElementById("boxL").value = "";
+    document.getElementById("boxW").value = "";
+    document.getElementById("boxH").value = "";
     document.getElementById("boxQty").value = 10;
     document.getElementById("boxWeight").value = 0;
     document.getElementById("baseLW").checked = true;
-    document.getElementById("baseWH").checked = document.getElementById("baseHL").checked = false;
+    document.getElementById("baseWH").checked = false;
+    document.getElementById("baseHL").checked = false;
 }
 
 function updateBoxTable() {
@@ -248,6 +315,7 @@ function removeBox(i) {
     }
 }
 
+// ==================== 적재 알고리즘 ====================
 function getAllowedOrientations(box) {
     const {l, w, h, allowedBases} = box;
     const orientations = [];
@@ -257,17 +325,14 @@ function getAllowedOrientations(box) {
     return orientations;
 }
 
-// 핵심 수정: Y 방향 우선 적재 (y부터 채우고 x로 이동)
 function packContainer(container, remainingBoxes) {
     const {L: contL, W: contW, H: contH, maxKg: maxWeight} = container;
     let currentWeight = 0;
     const packed = [];
     let z = 0;
-    let layerInfo = []; // 각 층의 분할 정보 저장
 
     while (z < contH && remainingBoxes.some(b => b.qty > 0)) {
         let layerPacked = false;
-        let layerDivision = null; // 현재 층의 nx, ny
 
         for (let box of remainingBoxes) {
             if (box.qty <= 0) continue;
@@ -292,10 +357,8 @@ function packContainer(container, remainingBoxes) {
             const {baseX, baseY, height} = bestOrient;
             const nx = Math.floor(contL / baseX);
             const ny = Math.floor(contW / baseY);
-            layerDivision = {nx, ny, boxName: box.name}; // 분할 정보 저장
 
             let canPlace = nx * ny;
-
             if (currentWeight + canPlace * box.weight > maxWeight) {
                 canPlace = Math.floor((maxWeight - currentWeight) / box.weight);
                 if (canPlace <= 0) continue;
@@ -303,10 +366,10 @@ function packContainer(container, remainingBoxes) {
 
             const toPlace = Math.min(canPlace, box.qty);
 
-            // Y 방향 우선 채우기: iy 먼저 증가, ix 나중에
+            // Y 방향 우선 적재
             for (let i = 0; i < toPlace; i++) {
-                const iy = i % ny;           // y 방향 먼저
-                const ix = Math.floor(i / ny); // x 방향 나중
+                const iy = i % ny;
+                const ix = Math.floor(i / ny);
                 packed.push({
                     x: ix * baseX,
                     y: iy * baseY,
@@ -322,10 +385,7 @@ function packContainer(container, remainingBoxes) {
             box.qty -= toPlace;
             currentWeight += toPlace * box.weight;
             layerPacked = true;
-        }
-
-        if (layerPacked && layerDivision) {
-            layerInfo.push(layerDivision);
+            break;   // 한 층에 한 종류의 박스만 배치 (단순화)
         }
 
         if (!layerPacked) break;
@@ -339,50 +399,37 @@ function packContainer(container, remainingBoxes) {
     const usedVolume = packed.reduce((s, p) => s + p.dx * p.dy * p.dz, 0);
     const totalVolume = contL * contW * contH;
 
-    // 층별 분할 문자열 생성
-    let divisionStr = "없음";
-    if (layerInfo.length > 0) {
-        // 같은 박스면 하나로 합침, 다른 박스면 층별 표시
-        const uniqueLayers = [];
-        layerInfo.forEach(info => {
-            uniqueLayers.push(`L(${info.nx})×W(${info.ny})`);
-        });
-        divisionStr = uniqueLayers.join(" + ");
-    }
-
     return {
         packed,
         volPct: Math.round(100 * usedVolume / totalVolume),
         weightUsed: currentWeight,
         weightPct: Math.round(100 * currentWeight / maxWeight),
-        division: divisionStr,
-        layers: layerInfo.length
+        layers: Math.ceil(z / 100)   // 대략적인 층 수
     };
 }
 
+// ==================== 핵심: 3D 시뮬레이션 (스케일 왜곡 해결) ====================
 function runSimulation() {
     if (containerList.length === 0 || boxes.length === 0) {
         alert("컨테이너와 화물을 모두 추가해주세요.");
         return;
     }
 
-    let remainingBoxes = boxes.map(b => ({
-        ...b,
-        allowedBases: [...b.allowedBases]
-    }));
+    let remainingBoxes = boxes.map(b => ({ ...b, allowedBases: [...b.allowedBases] }));
 
     let allResults = [];
     let totalPacked = 0;
     let offsetX = 0;
     const traces = [];
+    let totalSceneWidth = 0;
 
     containerList.forEach(cont => {
         const cInfo = CONTAINERS[cont.key];
         for (let i = 0; i < cont.qty; i++) {
-            const container = {L: cInfo.L, W: cInfo.W, H: cInfo.H, maxKg: cont.maxKg};
+            const container = { L: cInfo.L, W: cInfo.W, H: cInfo.H, maxKg: cont.maxKg };
             const result = packContainer(container, remainingBoxes);
 
-            allResults.push({name: `${cInfo.name} #${i+1}`, ...result});
+            allResults.push({ name: `${cInfo.name} #${i+1}`, ...result });
             totalPacked += result.packed.length;
 
             // 컨테이너 외곽
@@ -392,24 +439,26 @@ function runSimulation() {
                 x: [offsetX, offsetX+cInfo.L, offsetX+cInfo.L, offsetX, offsetX, offsetX+cInfo.L, offsetX+cInfo.L, offsetX],
                 y: [0, 0, cInfo.W, cInfo.W, 0, 0, cInfo.W, cInfo.W],
                 z: [0, 0, 0, 0, cInfo.H, cInfo.H, cInfo.H, cInfo.H],
-                i: [7,0,0,0,4,4,6,6,4,0,3,3],
+                i: [0,0,0,0,4,4,6,6,4,0,3,3],
                 j: [3,4,1,2,5,6,5,2,0,1,6,7],
-                k: [0,7,2,3,6,7,1,1,5,5,2,6],
+                k: [7,0,2,3,6,7,1,1,5,5,2,6],
                 color: 'lightgray',
-                opacity: 0.15
+                opacity: 0.18
             });
 
             // 박스들
             result.packed.forEach(p => {
-                const x = [p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX, p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX];
+                const x = [p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX,
+                           p.x+offsetX, p.x+p.dx+offsetX, p.x+p.dx+offsetX, p.x+offsetX];
                 const y = [p.y, p.y, p.y+p.dy, p.y+p.dy, p.y, p.y, p.y+p.dy, p.y+p.dy];
                 const z = [p.z, p.z, p.z, p.z, p.z+p.dz, p.z+p.dz, p.z+p.dz, p.z+p.dz];
+
                 traces.push({
                     type: 'mesh3d',
                     x, y, z,
-                    i: [7,0,0,0,4,4,6,1,4,0,3,3],
+                    i: [0,0,0,0,4,4,6,6,4,0,3,3],
                     j: [3,4,1,2,5,6,5,2,0,1,6,7],
-                    k: [0,7,2,3,6,7,1,1,5,5,2,6],
+                    k: [7,0,2,3,6,7,1,1,5,5,2,6],
                     color: p.color,
                     opacity: 0.85,
                     name: p.name
@@ -417,34 +466,46 @@ function runSimulation() {
             });
 
             offsetX += cInfo.L + 3000;
+            totalSceneWidth = offsetX;
         }
     });
 
-    let summaryHTML = `<h3>전체 적재 결과 - 총 ${totalPacked}개 적재</h3><hr>`;
+    // ==================== 실제 비율 유지 (왜곡 해결 핵심) ====================
+    const maxY = Math.max(...Object.values(CONTAINERS).map(c => c.W)) * 1.1;
+    const maxZ = Math.max(...Object.values(CONTAINERS).map(c => c.H)) * 1.1;
+
+    const aspectRatio = {
+        x: 1,
+        y: maxY / totalSceneWidth,
+        z: maxZ / totalSceneWidth
+    };
+
+    // 결과 요약
+    let summaryHTML = `<h3>전체 적재 결과 - 총 ${totalPacked}개 박스 적재</h3><hr>`;
     allResults.forEach((r, idx) => {
         summaryHTML += `
-            <h3>Container N${idx+1} - ${r.name}</h3>
-            <p><strong>Packed:</strong> ${r.packed.length} packages</p>
-            <p><strong>Arrangement:</strong> ${r.division} (총 ${r.layers}층)</p>
-            <p><strong>Volume utilization:</strong> ${r.volPct}%</p>
-            <p><strong>Cargo weight:</strong> ${r.weightUsed.toFixed(0)} kg (${r.weightPct}% of max)</p>
+            <h3>${r.name}</h3>
+            <p><strong>적재 박스:</strong> ${r.packed.length}개</p>
+            <p><strong>체적 활용률:</strong> ${r.volPct}%</p>
+            <p><strong>사용 중량:</strong> ${r.weightUsed.toFixed(0)} kg (${r.weightPct}%)</p>
             <hr>`;
     });
 
     document.getElementById("summary").innerHTML = summaryHTML;
     document.getElementById("result").style.display = "block";
 
+    // Plotly 3D 그래프
     Plotly.newPlot('plot', traces, {
-        title: '컨테이너 적재 3D 시뮬레이션 (Y축 우선 적재)',
+        title: '컨테이너 적재 3D 시뮬레이션',
         scene: {
-            xaxis: {title: 'Length (mm)'},
-            yaxis: {title: 'Width (mm)'},
-            zaxis: {title: 'Height (mm)'},
+            xaxis: { title: 'Length (mm)', range: [0, totalSceneWidth] },
+            yaxis: { title: 'Width (mm)' },
+            zaxis: { title: 'Height (mm)' },
             aspectmode: 'manual',
-            aspectratio: {x: 3, y: 1, z: 1},
-            camera: {eye: {x: 1.8, y: 1.8, z: 1.2}}
+            aspectratio: aspectRatio,        // ← 실제 비율 적용
+            camera: { eye: { x: 1.7, y: 1.5, z: 1.2 } }
         },
-        margin: {t: 60}
+        margin: { t: 80, b: 60, l: 60, r: 60 }
     });
 }
 </script>
